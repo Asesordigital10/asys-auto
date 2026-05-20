@@ -1,1 +1,331 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-zinc-950 text-zinc-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASYS AUTO - Telemetría & Eficiencia EV</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap)');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-x-hidden select-none">
 
+    <!-- Notificaciones Toast -->
+    <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4"></div>
+
+    <!-- Modal de confirmación personalizado -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="alert-triangle"></i>
+            </div>
+            <h3 class="text-lg font-bold text-zinc-100 mb-2">¿Confirmar acción?</h3>
+            <p id="confirm-text" class="text-sm text-zinc-400 mb-6">Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel" class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all text-zinc-300 rounded-2xl font-bold text-sm">Cancelar</button>
+                <button id="confirm-ok" class="flex-1 py-3 bg-red-600 hover:bg-red-500 active:scale-95 transition-all text-white rounded-2xl font-bold text-sm">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Login -->
+    <div id="login-screen" class="flex-1 flex flex-col justify-center items-center px-6">
+        <div class="w-full max-w-md text-center">
+            <div class="w-20 h-20 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i data-lucide="zap" class="w-10 h-10"></i>
+            </div>
+            <h1 class="text-3xl font-black tracking-tight text-white mb-2">ASYS AUTO</h1>
+            <p class="text-zinc-400 text-sm mb-8 font-medium">Gestión inteligente de telemetría y diagnóstico RAG para vehículos eléctricos.</p>
+            <button onclick="window.loginGoogle()" class="w-full py-4 bg-white hover:bg-zinc-100 text-zinc-950 font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Iniciar sesión con Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <div id="main-app" class="flex-1 flex flex-col hidden pb-20">
+        <header class="bg-zinc-950/80 backdrop-blur-md sticky top-0 z-40 border-b border-zinc-900 px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl flex items-center justify-center">
+                    <i data-lucide="zap"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest leading-none">Vehículo vinculado</p>
+                    <h2 id="user-display-name" class="text-sm font-bold text-white leading-tight">Cargando...</h2>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.toggleConfig()" class="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-zinc-400 hover:text-white transition-all">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                </button>
+                <button onclick="window.logout()" class="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-2xl border border-zinc-800 text-zinc-400 hover:text-red-400 transition-all">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
+            <!-- Ahorro Comparativo -->
+            <div class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+                <p class="text-[10px] text-emerald-400 uppercase font-black tracking-widest mb-1">Ahorro acumulado vs Nafta</p>
+                <h3 id="ahorro-valor" class="text-4xl font-black text-white">$ 0</h3>
+                <p class="text-xs text-zinc-500 mt-1 mb-4 font-medium">Diferencial energético real con tarifas inteligentes de UTE.</p>
+                <div class="border-t border-zinc-800/60 pt-4">
+                    <p class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mb-2">Nafta de referencia</p>
+                    <div id="fuel-selectors" class="grid grid-cols-2 gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Estado de Batería y Mantenimiento -->
+            <div class="grid grid-cols-1 gap-4">
+                <div id="card-bateria"></div>
+                <div id="card-mantenimiento"></div>
+            </div>
+
+            <!-- Registro de Carga -->
+            <div class="bg-zinc-900/60 border border-zinc-800 p-6 rounded-[2.5rem] shadow-xl">
+                <h4 class="font-black text-lg text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="text-emerald-500"></i> Registrar Carga
+                </h4>
+                <form onsubmit="window.registrarCarga(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1.5">KM actual</label>
+                            <input type="number" id="km" required class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1.5">Tarifa aplicada</label>
+                            <select id="tipo-tarifa" onchange="window.actualizarPreview()" required class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-2xl px-3 py-3 text-sm text-white focus:outline-none transition-all">
+                                <option value="hogarValle">Doble/Triple UTE (Valle)</option>
+                                <option value="uteLenta">Punto UTE (Lenta)</option>
+                                <option value="uteRapida">Punto UTE (Rápida)</option>
+                                <option value="wallboxEspecial">Wallbox Privado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1.5">SoC Inicial (%)</label>
+                            <input type="number" id="bat-inicio" min="0" max="100" oninput="window.actualizarPreview()" required class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1.5">SoC Final (%)</label>
+                            <input type="number" id="bat-fin" min="0" max="100" oninput="window.actualizarPreview()" required class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <label class="flex items-center gap-3 bg-zinc-950/50 border border-zinc-800/40 p-4 rounded-2xl cursor-pointer">
+                        <input type="checkbox" id="es-cien" class="w-4 h-4 rounded text-purple-600 bg-zinc-950 border-zinc-800 focus:ring-purple-500">
+                        <div>
+                            <p class="text-xs font-bold text-zinc-200">Carga al 100%</p>
+                            <p class="text-[10px] text-zinc-500 font-medium">Ecualiza y balancea las celdas de la batería LFP.</p>
+                        </div>
+                    </label>
+
+                    <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center">
+                        <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Costo estimado:</span>
+                        <div id="preview-costo" class="text-sm text-emerald-400">
+                            <span class="text-[10px] uppercase text-zinc-600 font-bold tracking-widest">Faltan datos...</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl active:scale-95 transition-all shadow-lg shadow-emerald-600/10">
+                        Guardar Registro de Carga
+                    </button>
+                </form>
+            </div>
+
+            <!-- Asistente de Diagnóstico Técnico IA -->
+            <div class="bg-zinc-900/60 border border-zinc-800 p-6 rounded-[2.5rem] shadow-xl space-y-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-lg text-white">Asistente Técnico IA</h4>
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest">Base de Conocimientos RAG</p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-zinc-400 leading-relaxed font-medium">Pregunta sobre códigos de error o sube una fotografía del tablero.</p>
+
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="input-busqueda" placeholder="¿Qué significa el código EV-01?" class="flex-1 bg-zinc-950 border border-zinc-800 focus:border-blue-500 rounded-2xl px-4 py-3.5 text-sm text-white focus:outline-none transition-all">
+                        <div class="relative">
+                            <input type="file" id="input-foto" accept="image/*" onchange="window.previsualizarFoto()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <button class="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl text-zinc-400 hover:text-white transition-all h-full">
+                                <i data-lucide="camera" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="container-preview" class="hidden relative bg-zinc-950 border border-zinc-800 p-2 rounded-2xl">
+                        <img id="img-preview" src="" alt="Foto Tablero" class="max-h-40 rounded-xl mx-auto object-cover">
+                        <button onclick="window.quitarFoto()" class="absolute top-4 right-4 bg-red-600/90 text-white p-2 rounded-full hover:bg-red-500 active:scale-90 transition-all">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="window.preguntarIA()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> Consultar Inteligencia Artificial
+                    </button>
+
+                    <div id="sugerencias-manual" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Historial de cargas -->
+            <div class="space-y-3">
+                <h4 class="font-black text-xs text-zinc-500 uppercase tracking-widest mb-1">Últimas cargas</h4>
+                <div id="lista-cargas" class="space-y-2"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Configuración -->
+    <div id="modal-config" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden my-8">
+            <header class="p-6 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="text-xl font-black text-white flex items-center gap-2"><i data-lucide="settings" class="text-emerald-400"></i> Ajustes de Telemetría</h3>
+                <button onclick="window.toggleConfig()" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-400 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </header>
+            
+            <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div class="space-y-4">
+                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest border-b border-zinc-800 pb-2">Información del Auto</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Nombre Propietario</label>
+                            <input type="text" id="conf-nombre" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Modelo de Auto (RAG)</label>
+                            <input type="text" id="conf-modelo" placeholder="Ej: BYD Dolphin" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Matrícula</label>
+                            <input type="text" id="conf-matricula" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Batería (kWh)</label>
+                            <input type="number" step="0.1" id="conf-bat-cap" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">ICE (km/Litro)</label>
+                            <input type="number" step="0.1" id="conf-rend-ant" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Tipo de Servicio</label>
+                            <select id="conf-tipo-uso" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                                <option value="particular">Particular</option>
+                                <option value="profesional">Profesional (Exonerado de Tasas)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Comparar con Combustible</label>
+                            <select id="conf-tipo-nafta" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest border-b border-zinc-800 pb-2">Tarifas e Impuestos (Uruguay)</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Hogar Triple Valle ($/kWh)</label>
+                            <input type="number" step="0.01" id="p-hogar" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">UTE Lenta ($/kWh)</label>
+                            <input type="number" step="0.01" id="p-ute-l" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">UTE Rápida ($/kWh)</label>
+                            <input type="number" step="0.01" id="p-ute-r" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Wallbox Especial ($/kWh)</label>
+                            <input type="number" step="0.01" id="p-wallbox" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Super 95 ($/Litro)</label>
+                            <input type="number" step="0.01" id="p-super" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Premium 97 ($/Litro)</label>
+                            <input type="number" step="0.01" id="p-premium" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Gasoil 10S ($/Litro)</label>
+                            <input type="number" step="0.01" id="p-gasoil10" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Gasoil 50-S ($/Litro)</label>
+                            <input type="number" step="0.01" id="p-gasoil50" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest border-b border-zinc-800 pb-2">Taller de Respaldo</h4>
+                    <div>
+                        <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Nombre del Establecimiento</label>
+                        <input type="text" id="conf-taller" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Dirección Física</label>
+                            <input type="text" id="conf-taller-dir" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">WhatsApp de Agenda</label>
+                            <input type="text" id="conf-taller-tel" placeholder="Ej: 59899123456" class="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón inyector para RAG en Testing -->
+                <div class="bg-blue-600/10 border border-blue-500/20 p-5 rounded-3xl space-y-3">
+                    <h4 class="text-xs font-black text-blue-400 uppercase tracking-widest">Base de Datos de Conocimiento RAG</h4>
+                    <button onclick="window.populateMockManuals(event)" id="btn-mock-db" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all">
+                        Inyectar manuales técnicos de prueba a Firestore
+                    </button>
+                </div>
+            </div>
+
+            <footer class="p-6 border-t border-zinc-800 bg-zinc-900/50 flex gap-3">
+                <button onclick="window.toggleConfig()" class="flex-1 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-2xl font-bold text-sm transition-all active:scale-95">Cancelar</button>
+                <button onclick="window.guardarConfig(event)" id="btn-save-config" class="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg">Guardar Parámetros</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Carga del archivo app.js en formato ES6 Module -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
