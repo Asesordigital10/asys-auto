@@ -1,17 +1,18 @@
-import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js)";
-import { initializeAppCheck, ReCaptchaV3Provider } from "[https://www.gstatic.com/firebasejs/11.0.1/firebase-app-check.js](https://www.gstatic.com/firebasejs/11.0.1/firebase-app-check.js)";
-import { getAuth, onAuthStateChanged, signInWithPopup, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signOut, setPersistence, browserLocalPersistence } from "[https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js)";
-import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, getDocs } from "[https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js)";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app-check.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// === 1. PARÁMETROS DE CONEXIÓN FIREBASE ===
-// Reemplaza este objeto con tus credenciales obtenidas en Firebase Console:
+// === 1. PARÁMETROS DE CONEXIÓN FIREBASE (PROYECTO ASYS-AUTO) ===
 const firebaseConfig = {
-    apiKey: "AIzaSyA11UK2o8-EgE9vTTcw-eeA55yC-n9eZIg",
-    authDomain: "app-autos-electricos-5a311.firebaseapp.com",
-    projectId: "app-autos-electricos-5a311",
-    storageBucket: "app-autos-electricos-5a311.firebasestorage.app",
-    messagingSenderId: "877759630392",
-    appId: "1:877759630392:web:eed9d7b0f1a99fd91c2acd"
+    apiKey: "AIzaSyBRDW7x-4N3oC4ouiykHNNBrtRjCaJjQzo",
+    authDomain: "asys-auto.firebaseapp.com",
+    projectId: "asys-auto",
+    storageBucket: "asys-auto.firebasestorage.app",
+    messagingSenderId: "362622147160",
+    appId: "1:362622147160:web:34401392b73da2793bc82d",
+    measurementId: "G-1TBNP0GGYX"
 };
 
 const RECAPTCHA_SITE_KEY = "6LdE3OosAAAAALzMd8EpS2gkNU6JfG5KmZNv35E5";
@@ -21,6 +22,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 setPersistence(auth, browserLocalPersistence);
+
+// Inicialización condicional de Analytics (evita errores en entornos locales/pruebas)
+try {
+    const analytics = getAnalytics(app);
+    console.log("Firebase Analytics inicializado.");
+} catch (error) {
+    console.log("Analytics omitido en entorno actual.");
+}
 
 try {
     initializeAppCheck(app, {
