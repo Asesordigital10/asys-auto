@@ -1,18 +1,19 @@
+// === IMPORTACIONES NATIVAS PARA GITHUB PAGES (SIN EMPAQUETADOR) ===
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app-check.js";
-import { getAuth, onAuthStateChanged, signInWithPopup, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// === 1. PARÁMETROS DE CONEXIÓN FIREBASE (PROYECTO ASYS-AUTO) ===
+// === 1. PARÁMETROS DE CONEXIÓN FIREBASE (TU PROYECTO) ===
 const firebaseConfig = {
-    apiKey: "AIzaSyBRDW7x-4N3oC4ouiykHNNBrtRjCaJjQzo",
-    authDomain: "asys-auto.firebaseapp.com",
-    projectId: "asys-auto",
-    storageBucket: "asys-auto.firebasestorage.app",
-    messagingSenderId: "362622147160",
-    appId: "1:362622147160:web:34401392b73da2793bc82d",
-    measurementId: "G-1TBNP0GGYX"
+  apiKey: "AIzaSyBRDW7x-4N3oC4ouiykHNNBrtRjCaJjQzo",
+  authDomain: "asys-auto.firebaseapp.com",
+  projectId: "asys-auto",
+  storageBucket: "asys-auto.firebasestorage.app",
+  messagingSenderId: "362622147160",
+  appId: "1:362622147160:web:34401392b73da2793bc82d",
+  measurementId: "G-1TBNP0GGYX"
 };
 
 const RECAPTCHA_SITE_KEY = "6LdE3OosAAAAALzMd8EpS2gkNU6JfG5KmZNv35E5";
@@ -21,15 +22,17 @@ const RECAPTCHA_SITE_KEY = "6LdE3OosAAAAALzMd8EpS2gkNU6JfG5KmZNv35E5";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-setPersistence(auth, browserLocalPersistence);
 
-// Inicialización condicional de Analytics (evita errores en entornos locales/pruebas)
+// Inicializamos Analytics de forma segura
 try {
     const analytics = getAnalytics(app);
-    console.log("Firebase Analytics inicializado.");
-} catch (error) {
-    console.log("Analytics omitido en entorno actual.");
+    console.log("Analytics activado.");
+} catch (e) {
+    console.log("Analytics no disponible en este entorno.");
 }
+
+// Persistencia local para que el usuario no tenga que loguearse a cada rato
+setPersistence(auth, browserLocalPersistence);
 
 try {
     initializeAppCheck(app, {
@@ -41,6 +44,8 @@ try {
 }
 
 const provider = new GoogleAuthProvider();
+// Forzamos a que el pop-up de Google siempre pida seleccionar cuenta
+provider.setCustomParameters({ prompt: 'select_account' });
 
 // === 3. RUTAS DE BASE DE DATOS (AISLAMIENTO DE DATOS) ===
 const getPublicCollection = (collectionName) => {
@@ -125,7 +130,7 @@ onAuthStateChanged(auth, (u) => {
         if(loginScreen) loginScreen.classList.add('hidden');
         if(mainApp) mainApp.classList.remove('hidden');
         
-        showNotification(`¡Sesión iniciada con éxito!`, 'success');
+        showNotification(`¡Bienvenido, ${user.displayName}!`, 'success');
 
         const cargasColl = getUserCollection('cargas');
         if (cargasColl) {
@@ -233,7 +238,7 @@ window.registrarCarga = async (e) => {
 
 // === 8. MOTOR NATIVO GEMINI IA ===
 async function llamarGemini(prompt, fotoBase64, sistema) {
-    const apiKey = ""; // Se autoinyecta en runtime
+    const apiKey = ""; // En producción real, esto debería ir en una Cloud Function
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
     
     let partes = [{ text: prompt }];
@@ -359,7 +364,7 @@ window.populateMockManuals = async (e) => {
         showNotification("Manuales insertados de manera exitosa.", "success");
         if(btn) btn.innerText = "¡MANUALES GUARDADOS! ✅";
     } catch (err) {
-        showNotification("Error de escritura en Firebase.", "error");
+        showNotification("Error de escritura en Firebase. Revisa las reglas de seguridad.", "error");
     }
 };
 
@@ -455,9 +460,15 @@ function renderizarApp() {
     } catch (e) {}
 }
 
-// === 12. CONTROLADORES GLOBALES ===
+// === 12. CONTROLADORES GLOBALES DE INTERFAZ ===
 window.loginGoogle = async () => { 
-    try { await signInWithPopup(auth, provider); } catch (e) {} 
+    try { 
+        console.log("Iniciando solicitud de pop-up de Google...");
+        await signInWithPopup(auth, provider); 
+    } catch (e) {
+        console.error("Error detallado de Auth:", e);
+        showNotification("Error al abrir la ventana de Google. Revisa bloqueadores de pop-ups.", "error");
+    } 
 };
 
 window.logout = () => signOut(auth).then(() => {
